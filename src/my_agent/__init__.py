@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from my-agent!")
+"""Main package for my-agent."""
