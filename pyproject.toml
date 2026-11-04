@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "google-search-results>=2.4.2",
     "load-dotenv>=0.1.0",
     "openai>=3.42.1",
     "requests>=2.34.2",
