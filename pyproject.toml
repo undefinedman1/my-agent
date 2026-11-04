@@ -8,10 +8,17 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "asyncio>=4.0.0",
+    "autogen-agentchat>=0.7.5",
+    "autogen-ext[azure,openai]>=0.7.5",
+    "dotenv>=0.9.9",
     "google-search-results>=2.4.2",
     "load-dotenv>=0.1.0",
-    "openai>=3.42.1",
-    "requests>=2.34.2",
+    "openai>=1.0.0",
+    "pandas>=2.0.0",
+    "plotly>=5.15.0",
+    "requests>=2.31.0",
+    "streamlit>=1.30.0",
     "tavily-python>=0.8.5",
 ]
 
