@@ -1,0 +1,115 @@
+{
+  "session_info": {
+    "session_id": "session_20261110_165742",
+    "user_id": "web_user",
+    "start_time": "2026-11-10T16:57:42.180755",
+    "duration_seconds": 495.687201
+  },
+  "learning_metrics": {
+    "documents_loaded": 1,
+    "questions_asked": 3,
+    "concepts_learned": 1
+  },
+  "memory_summary": [
+    {
+      "memory_id": "0431605e538f46c68b2fd10c73576373",
+      "user_id": "web_user",
+      "task_id": "chapter8-learning-assistant",
+      "content": "相关概念：transformer\n学习笔记：这是一个笔记的测试",
+      "source": "用户在会话 session_20261110_165742 中记录的学习笔记",
+      "kind": "fact",
+      "status": "active",
+      "created_at": "2026-11-10T09:05:36.953431+00:00",
+      "updated_at": "2026-11-10T09:05:36.953431+00:00",
+      "supersedes": null
+    },
+    {
+      "memory_id": "08110ddc46f0483e851b8357a88bfcb0",
+      "user_id": "web_user",
+      "task_id": "chapter8-learning-assistant",
+      "content": "完成关于「如何训练大语言模型？」的资料检索",
+      "source": "RAG 检索，会话 session_20261110_165742",
+      "kind": "episode",
+      "status": "active",
+      "created_at": "2026-11-10T08:59:32.411780+00:00",
+      "updated_at": "2026-11-10T08:59:32.411780+00:00",
+      "supersedes": null
+    },
+    {
+      "memory_id": "5f3056ec88e0483bb0af06f85b06a66a",
+      "user_id": "web_user",
+      "task_id": "chapter8-learning-assistant",
+      "content": "提问：如何训练大语言模型？",
+      "source": "用户在会话 session_20261110_165742 中提出的问题",
+      "kind": "episode",
+      "status": "active",
+      "created_at": "2026-11-10T08:59:32.342945+00:00",
+      "updated_at": "2026-11-10T08:59:32.342945+00:00",
+      "supersedes": null
+    },
+    {
+      "memory_id": "7c80d0a5e7c34f018e86221aca23abec",
+      "user_id": "web_user",
+      "task_id": "chapter8-learning-assistant",
+      "content": "完成关于「Transformer架构有哪些核心组件？」的资料检索",
+      "source": "RAG 检索，会话 session_20261110_165742",
+      "kind": "episode",
+      "status": "active",
+      "created_at": "2026-11-10T08:59:00.576298+00:00",
+      "updated_at": "2026-11-10T08:59:00.576298+00:00",
+      "supersedes": null
+    },
+    {
+      "memory_id": "c8a4911e2b75405f9fa5e7b75f799399",
+      "user_id": "web_user",
+      "task_id": "chapter8-learning-assistant",
+      "content": "提问：Transformer架构有哪些核心组件？",
+      "source": "用户在会话 session_20261110_165742 中提出的问题",
+      "kind": "episode",
+      "status": "active",
+      "created_at": "2026-11-10T08:59:00.508818+00:00",
+      "updated_at": "2026-11-10T08:59:00.508818+00:00",
+      "supersedes": null
+    },
+    {
+      "memory_id": "af97c410bcc24d0ab9d5beb56566cd27",
+      "user_id": "web_user",
+      "task_id": "chapter8-learning-assistant",
+      "content": "完成关于「什么是大语言模型？」的资料检索",
+      "source": "RAG 检索，会话 session_20261110_165742",
+      "kind": "episode",
+      "status": "active",
+      "created_at": "2026-11-10T08:58:15.592573+00:00",
+      "updated_at": "2026-11-10T08:58:15.592573+00:00",
+      "supersedes": null
+    },
+    {
+      "memory_id": "396dd065b9b2401cb0e87f18673fb83b",
+      "user_id": "web_user",
+      "task_id": "chapter8-learning-assistant",
+      "content": "提问：什么是大语言模型？",
+      "source": "用户在会话 session_20261110_165742 中提出的问题",
+      "kind": "episode",
+      "status": "active",
+      "created_at": "2026-11-10T08:58:15.525512+00:00",
+      "updated_at": "2026-11-10T08:58:15.525512+00:00",
+      "supersedes": null
+    },
+    {
+      "memory_id": "3607d487289f436d93cf328ad73dfff2",
+      "user_id": "web_user",
+      "task_id": "chapter8-learning-assistant",
+      "content": "加载了文档《Happy-LLM-0727.pdf》",
+      "source": "PDF 文件：C:\\Users\\james\\AppData\\Local\\Temp\\gradio\\c04def45cb0242f27ab4be87e98ad482c7f1bebac26153ae51bb674cf7ca37ad\\Happy-LLM-0727.pdf",
+      "kind": "episode",
+      "status": "active",
+      "created_at": "2026-11-10T08:57:56.288510+00:00",
+      "updated_at": "2026-11-10T08:57:56.288510+00:00",
+      "supersedes": null
+    }
+  ],
+  "rag_status": {
+    "revision": 1,
+    "indexed_chunks": 279
+  }
+}

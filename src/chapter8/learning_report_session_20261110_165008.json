@@ -1,0 +1,15 @@
+{
+  "session_info": {
+    "session_id": "session_20261110_165008",
+    "user_id": "web_user",
+    "start_time": "2026-11-10T16:50:08.375211",
+    "duration_seconds": 30.736424
+  },
+  "learning_metrics": {
+    "documents_loaded": 1,
+    "questions_asked": 0,
+    "concepts_learned": 0
+  },
+  "memory_summary": "ToolResponse(status=<ToolStatus.ERROR: 'error'>, text='未知 memory action', data={}, error_info={'code': 'INVALID_PARAM', 'message': '未知 memory action'}, stats=None, context=None)",
+  "rag_status": "ToolResponse(status=<ToolStatus.ERROR: 'error'>, text='action 必须是 search、read 或 read_document', data={}, error_info={'code': 'INVALID_PARAM', 'message': 'action 必须是 search、read 或 read_document'}, stats=None, context=None)"
+}
