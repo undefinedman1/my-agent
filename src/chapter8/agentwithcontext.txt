@@ -1,0 +1,230 @@
+(my-agent) PS C:\Users\james\Desktop\my-agent\src\chapter8> python agentWithContext.py
+提示：推荐安装 Python 3.13；当前 Python 3.12 可以继续运行。
+# Pandas 内存优化实战指南
+
+下面主要围绕一条完整链路来讨论：**先度量 → 再逐列降型 → 在读取时控制内存 → 更换存储格式 → 运行期技巧 → 超出单机时换工具**。
+
+---
+
+## 0. 最重要的前提：必须用 `deep=True` 度量
+
+```python
+import pandas as pd
+
+df.info(memory_usage="deep")          # 逐列真实占用
+df.memory_usage(deep=True).sort_values(ascending=False)  # 定位占用最多的列
+```
+
+> ⚠️ 不加 `deep=True` 时，`object` 列只统计指针（8 bytes/元素），**会严重低估**真实内存。字符串列往往是内存占用最大的部分，不打开 `deep` 根本看不到。
+
+经验规律：一个 1GB 的 CSV，读成 DataFrame 后通常占 **2~10 倍**内存（取决于字符串列占比和基数）。
+
+---
+
+## 1. 数据类型降级：收益最大的一步
+
+### 1.1 数值列：降位宽
+
+| 原类型 | 可降为 | 内存 | 范围 |
+|---|---|---|---|
+| `int64` | `int8 / int16 / int32` | 1/8 ~ 1/2 | -128~127 / -32768~32767 / ±2.1e9 |
+| `float64` | `float32` | 1/2 | 精度约 7 位有效数字 |
+| `int64` | `float32`（当有缺失时） | 1/2 | — |
+
+```python
+# 自动降级数值列
+def downcast_numeric(df):
+    for col in df.select_dtypes(include=["int", "float"]).columns:
+        if df[col].dtype.kind == "i":
+            df[col] = pd.to_numeric(df[col], downcast="integer")
+        else:
+            df[col] = pd.to_numeric(df[col], downcast="float")
+    return df
+```
+
+注意：如果列里有 `NaN`，整数列会被提升为 `float64`，此时可用 **nullable int**：`Int32` / `Int16`（注意是**大写 I**），既保留整数又支持缺失值。
+
+### 1.2 字符串列：低基数转 `category`
+
+这是节省内存最重要的方法。重复字符串被编码成整数 code 和一张小字典。
+
+```python
+# 判定是否值得转 category：唯一值占比
+for col in df.select_dtypes(include="object").columns:
+    n_unique = df[col].nunique(dropna=False)
+    ratio = n_unique / len(df)
+    if ratio < 0.5:                     # 经验阈值：基数 < 50%
+        df[col] = df[col].astype("category")
+```
+
+`category` 的收益取决于**基数**：唯一值越少，收益越大。基数接近行数时（例如 ID 列），转 category 反而可能更占内存，而且不便于比较。**ID 列不要盲目转 category**——通常更该考虑是否真的需要它，或者转成 `int64` 数值编码。
+
+### 1.3 布尔列 / 低基数列
+
+- `object` 型的 `"True"/"False"` 字符串 → `astype(bool)`
+- 少量枚举值 → `category`
+- 极端情况（大量 0）→ `pd.arrays.SparseArray`，只存非零值
+- 多列互斥的 one-hot 编码 → 用 `category` 存原始标签，别真的展开成 N 列
+
+### 1.4 时间列
+
+- `pd.to_datetime` 后默认是 `datetime64[ns]`（8 bytes）
+- 如果不需要纳秒精度，可降到 **`datetime64[s]`**（同样 8 bytes，但更便于序列化）或存为 `int32`（Unix 秒，4 bytes）
+- 时区统一后再存储，避免 object 型字符串时间
+
+---
+
+## 2. 读取阶段就控制内存（比读完再转更划算）
+
+```python
+pd.read_csv(
+    "big.csv",
+    usecols=["id", "ts", "amount", "city"],   # 1) 只读需要的列
+    dtype={                                    # 2) 直接指定目标类型
+        "id": "int32",
+        "amount": "float32",
+        "city": "category",
+    },
+    parse_dates=["ts"],
+    engine="pyarrow",                          # 3) 更快的解析器（pandas>=2.0）
+    # chunksize=500_000,                       # 4) 分块读取
+)
+```
+
+要点：
+- **`usecols`** 是零成本收益——不读的列不占内存
+- **`dtype=`** 避免先读成 int64/object 再转换的“双份峰值内存”
+- **`engine="pyarrow"`** 解析更快、峰值内存更低（pandas ≥ 2.0）
+- **`chunksize`** 用于“读一块→加工一块→写出/聚合一块”，最后再 `pd.concat` 聚合结果，而不是把每块都留着
+- 已知分类字典时，用 `dtype={"city": pd.CategoricalDtype(categories=known_list)}` 固定字典，避免每块字典不一致
+
+分块处理的正确姿势：
+
+```python
+results = []
+for chunk in pd.read_csv("big.csv", chunksize=1_000_000, dtype=dtypes):
+    agg = chunk.groupby("city", observed=True)["amount"].sum()
+    results.append(agg)
+final = pd.concat(results).groupby(level=0).sum()
+```
+
+---
+
+## 3. 换存储格式：Parquet / Feather
+
+CSV 是**文本**，无类型信息、体积大、每次读都要重新推断类型。列式格式则带 schema、可压缩、可按列读取。
+
+```python
+df.to_parquet("data.parquet", engine="pyarrow", compression="zstd", index=False)
+pd.read_parquet("data.parquet", columns=["id", "amount"])   # 只读部分列
+```
+
+| 格式 | 类型保留 | 列裁剪 | 典型体积 |
+|---|---|---|---|
+| CSV | ❌ | ❌ | 100% |
+| Parquet (snappy) | ✅ | ✅ | 10~25% |
+| Parquet (zstd) | ✅ | ✅ | 8~20% |
+| Feather | ✅ | ✅（有限） | 20~40% |
+
+**中间结果一定落 Parquet，不要落 CSV。** 这是整个流水线里最容易忽略、性价比又很高的一步。
+
+---
+
+## 4. 运行期技巧
+
+```python
+# 1) 及时释放不再使用的大对象
+del df_raw, tmp
+gc.collect()
+
+# 2) 避免链式索引产生隐藏副本
+df = df[df["a"] > 0].copy()        # 明确 copy，避免 SettingWithCopyWarning 与双份内存
+
+# 3) 用 loc 做原地替换，而不是先 copy 再赋值
+df.loc[df["x"] < 0, "x"] = 0
+
+# 4) 避免 iterrows / apply（慢且常产生中间 Series）
+#    改用向量化 / np.where / map（用 dict 映射比 apply 快且省内存）
+df["level"] = df["score"].map(score_to_level)
+
+# 5) groupby 时加 observed=True，避免 category 生成全组合空组
+df.groupby("city", observed=True)["amount"].sum()
+
+# 6) 合并大表前，先把 key 列降到能容纳双方取值的最小类型，并去重
+```
+
+**关于 `inplace=True`**：它并不能真正节省内存（很多操作仍会创建临时对象），不要把 `inplace` 当成优化手段；真正省内存的是**减少中间变量**和**降低 dtype**。
+
+---
+
+## 5. 一个开箱即用的组合函数
+
+```python
+import numpy as np
+import pandas as pd
+
+def optimize_dtypes(df, cat_threshold=0.5):
+    """对已载入的 DataFrame 做通用内存优化。"""
+    start = df.memory_usage(deep=True).sum()
+
+    for col in df.columns:
+        s = df[col]
+        # --- 数值列降位 ---
+        if pd.api.types.is_integer_dtype(s):
+            df[col] = pd.to_numeric(s, downcast="integer")
+        elif pd.api.types.is_float_dtype(s):
+            df[col] = pd.to_numeric(s, downcast="float")
+        # --- 字符串列 ---
+        elif s.dtype == "object":
+            n_unique = s.nunique(dropna=False)
+            if n_unique / max(len(s), 1) < cat_threshold:
+                df[col] = s.astype("category")
+            elif n_unique == 1:
+                df[col] = s.astype("category")
+        # --- 布尔型 object ---
+        elif s.dtype == "bool":
+            pass
+
+    end = df.memory_usage(deep=True).sum()
+    print(f"内存: {start/1024**2:.1f} MB -> {end/1024**2:.1f} MB "
+          f"(节省 {100*(1-end/start):.1f}%)")
+    return df
+```
+
+**注意：在函数内对 `df[col]` 赋值前，确保 `df` 是独立副本**（读入时或切片时 `.copy()`），否则会触发 `SettingWithCopyWarning` 并可能不生效。
+
+---
+
+## 6. 当单机 Pandas 真的不够时
+
+| 场景 | 推荐 |
+|---|---|
+| 数据能放进内存，只是偏紧 | 本文全部技巧（首要） |
+| 数据 > 内存，要做聚合/连接 | **DuckDB**（直接 SQL 查 Parquet，内存友好，出结果再转 Pandas） |
+| 需要完整 DataFrame API + 分布式 | **Dask** / **PySpark** |
+| 极致性能、单机多核 | **Polars**（惰性求值 + Arrow，内存和速度通常都比 Pandas 好） |
+
+DuckDB 典型用法（几乎零内存压力）：
+
+```python
+import duckdb
+df = duckdb.sql("""
+    SELECT city, sum(amount) AS total
+    FROM read_parquet('data/*.parquet')
+    GROUP BY city
+""").df()
+```
+
+---
+
+## 优先级速查
+
+1. **`memory_usage(deep=True)` 找出最大的那一列**（通常 80% 内存集中在一两列上）
+2. **字符串低基数列 → `category`**（收益通常最大）
+3. **数值降位：`int64→int8/16/32`、`float64→float32`**
+4. **读 CSV 时用 `usecols` + `dtype` + `engine="pyarrow"`**
+5. **中间结果存 Parquet（zstd），不存 CSV**
+6. **`del` + `gc.collect()` 释放中间对象；`groupby(observed=True)`**
+7. 仍然不够 → **DuckDB / Polars / Dask**
+
+一句话总结：**内存优化的绝大部分收益，来自“不用 object 存字符串”和“不用 64 位存小数”这两件事。**
