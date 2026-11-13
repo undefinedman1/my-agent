@@ -1,0 +1,16 @@
+{
+  "session_info": {
+    "session_id": "session_20261112_163913",
+    "project": "my-agent",
+    "duration_seconds": 104.148256
+  },
+  "activity": {
+    "file_operations": 18,
+    "notes_created": 0,
+    "tool_calls": 18
+  },
+  "notes": {
+    "count": 0,
+    "items": []
+  }
+}
